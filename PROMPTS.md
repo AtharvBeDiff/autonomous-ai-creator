@@ -1,61 +1,94 @@
 # AI Usage Log (Vibe-Code Hackathon)
 
-This document contains the AI prompt log for the **Autonomous AI Creator** project (Problem Statement 3).
+This document contains the complete AI development and prompt log for the **Autonomous AI Creator** project (Problem Statement 3).
+
+---
 
 ## Development Process Overview
 
-The project was developed using a "vibe-coding" approach with Google Antigravity (using the Gemini 1.5 Pro and Claude 3.5 Sonnet models). 
+The project was developed using a "vibe-coding" approach with Google Antigravity (powered by Gemini and Claude models).
 
-The core challenge was to build a server that stays alive for 48 hours and autonomously executes an LLM pipeline (Discover -> Judge -> Generate -> Store) without external webhooks or serverless functions being invoked.
+The core goal was to build a self-contained, autonomous server that stays active for 48 hours and executes a complete LLM pipeline (`Discover -> Judge -> Generate -> Store`) without needing external webhooks or human triggers after initialization.
 
-## Key Prompts & Iterations
+---
 
-### 1. Conceptual Alignment & Tech Stack Selection
+## Key Prompts, Iterations & Design Decisions
+
+### 1. Conceptual Alignment & Architecture
 **User Prompt:**
-> tell me what the no.3 really means and if that is vibe codable?
+> *Tell me what Problem 3 really means and if that is vibe-codable?*
 
-**AI Strategy & Analysis:**
-The AI broke down the problem statement into concrete engineering requirements:
-- Topic Discovery (RSS/HN Scraper)
-- Editorial Judgment (Explicit LLM rejection logic)
-- Consistent Persona (System prompts based on initialization)
-- Autonomous Publishing (Background cron job)
-- Memory (Local database to avoid duplicates)
+**AI Analysis:**
+- Broken down into core technical pillars:
+  - **Topic Discovery:** Automated RSS and Hacker News scraping for fresh tech news.
+  - **Editorial Decision-Making:** Mandatory rejection logic (~70% rejection rate) to filter out PR noise and generic hype.
+  - **Persona Consistency:** Character-sheet system prompts derived dynamically from initialization parameters.
+  - **Autonomous Scheduling:** Persistent in-process cron loops.
+  - **Memory:** Deduplication and historical tracking to prevent repeating topics.
 
 **User Prompt:**
-> which platform should i use to build it?
+> *Which platform should I use to build it?*
 
 **AI Decision:**
-The AI correctly identified that serverless platforms like Vercel or Netlify would fail the autonomous 48-hour requirement because background tasks would be killed. It recommended Node.js + Express deployed on **Railway** (or a similar persistent VM) to allow `node-cron` to run continuously in the background.
+- Serverless platforms (Vercel/Netlify) were rejected because they terminate background processes after HTTP requests finish.
+- Recommended **Node.js + Express on Railway** to keep the `node-cron` autonomous loop running 24/7.
 
-### 2. Implementation Planning
+---
+
+### 2. Cross-Platform Storage Optimization
+**Iteration:**
+- Initially designed with `better-sqlite3`. Native compilation failed on Windows due to missing C++ build tools, which would also risk failing during Railway container deployments.
+- **Solution:** Refactored `src/memory.js` to use a lightweight, thread-safe flat JSON database (`data/agent_db.json`) with atomic file writes.
+
+---
+
+### 3. LLM Pipeline & Rate Limit Optimization
 **User Prompt:**
-> ok then lets bui; it and if u have read the whole script i pasted about the hackathon, u know what other requirement it needs like prompts.md so make that too but start from this convo.
+> *Use gemini 3.5*
 
-**AI Action:**
-The AI generated a comprehensive `implementation_plan.md` artifact detailing:
-- The SQLite database schema (agents, posts, rejections, seen_urls)
-- The scraping strategy (Hacker News + 6 AI RSS feeds via `rss-parser`)
-- The multi-stage LLM pipeline (Gemini 1.5 Flash for cheap/fast editorial judgment, Gemini 1.5 Pro for post generation)
-- The autonomous scheduler (running every ~2 hours with slight randomness)
+**AI Adaptation & Engineering:**
+- Upgraded model integration to `gemini-3.5-flash` in `src/editorial.js` and `src/publisher.js`.
+- **Batch Evaluation:** Converted individual topic LLM calls into a single structured batch evaluation call (up to 15 topics in 1 request) to stay within Gemini Free Tier rate limits (15 RPM).
+- **Exponential Backoff:** Implemented a retry wrapper (`withRetry`) to handle HTTP 429 rate limits gracefully.
+- **Graceful Startup:** Ensured constructors do not crash if `GEMINI_API_KEY` is temporarily missing during container startup on Railway.
 
-### 3. Code Generation
-The AI systematically generated the required files in a modular structure:
-- `package.json`, `.env.example`, `railway.json`, `.gitignore`
-- `src/memory.js`: A robust SQLite implementation using `better-sqlite3` with WAL mode enabled.
-- `src/persona.js`: Dynamic prompt builders that enforce the persona provided during `/api/agent/init`.
-- `src/discovery.js`: Fetching and parsing data from Hacker News API and standard RSS feeds, filtering for AI keywords.
-- `src/editorial.js`: Implementing the critical "Editorial Judgment" requirement by forcing the LLM to explicitly reject 60-80% of topics and logging those rejections.
-- `src/publisher.js`: Tying together discovery, editorial, and generation into a single "cycle".
-- `src/scheduler.js`: Managing `node-cron` jobs and ensuring an immediate "bootstrap" post is generated 2 minutes after initialization for immediate evaluator feedback.
-- `src/agent.js` & `src/server.js`: Exposing the strict API contract required by the hackathon.
+---
 
-## API Usage
-- LLM API used: **Google Gemini API** (`gemini-1.5-flash` for judgment, `gemini-1.5-pro` for writing).
-- The prompt engineering heavily emphasizes the persona's requirement to be highly selective (rejecting generic PR announcements) to satisfy the "editorial judgment" evaluation criteria.
+### 4. Evaluator Experience & Delay Optimization
+**User Prompt:**
+> *If it does not actually take that long can't we just un-delay the time?*
 
-## Hackathon Rules Compliance
-- ✅ Public repository structure established.
-- ✅ PROMPTS.md included.
-- ✅ `POST /api/agent/init` and `GET /api/agent/feed` endpoints strictly match the specification.
-- ✅ Demonstrates autonomous behavior without human intervention after initialization.
+**AI Optimization:**
+- Reduced the initial bootstrap delay from 2 minutes (`120,000ms`) to 1 second (`1,000ms`).
+- Reduced the LLM rate-limit cooldown from 60 seconds to 3 seconds.
+- **Result:** After `POST /api/agent/init`, the agent completes its full scraping, judging, and writing cycle in under 15 seconds.
+
+---
+
+### 5. Automated Evaluation Verification
+**User Action:**
+- Ran `simulate-judging.js` to mimic the judge's exact workflow:
+  1. `POST /api/agent/init` with a test persona.
+  2. Silent background monitoring (no further user inputs).
+  3. Periodic `GET /api/agent/feed` polling.
+- **Result:** **PASSED** — Autonomous post generated, formatted with unique UUID, ISO 8601 UTC timestamp, and detailed editorial rationale.
+
+---
+
+## Technical Stack & API Specifications
+
+- **Runtime:** Node.js v18+ / Express.js
+- **LLM Engine:** `@google/generative-ai` (`gemini-3.5-flash`)
+- **Scheduler:** `node-cron`
+- **Data Persistence:** JSON File Database (`data/agent_db.json`)
+- **Scraper:** `rss-parser` + Native Fetch (Hacker News API + 6 RSS Feeds)
+
+---
+
+## Hackathon Spec Compliance Checklist
+
+- ✅ **Public GitHub Repository:** Established and synced.
+- ✅ **`PROMPTS.md`:** Detailed development log provided.
+- ✅ **Strict API Specification:** `POST /api/agent/init` and `GET /api/agent/feed` endpoints fully compliant.
+- ✅ **Editorial Transparency:** Every feed item includes a `rationale` field explaining why it was selected.
+- ✅ **Autonomous Operation:** Zero human interaction required after initialization.

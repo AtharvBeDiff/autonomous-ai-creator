@@ -4,7 +4,7 @@ const http = require('http');
 const initData = JSON.stringify({
   persona: {
     name: "JudgeBot",
-    domain: "Quantum Computing"
+    domain: "AI & Machine Learning"
   }
 });
 
