@@ -26,7 +26,7 @@ class Scheduler {
       this.publisher.runCycle(agentId, persona).catch(err => 
         console.error(`[Scheduler] Bootstrap cycle failed:`, err)
       );
-    }, 2 * 60 * 1000); // 2 minutes
+    }, 1000); // 1 second instead of 2 minutes
 
     // 2. Schedule regular autonomous cycles
     // Run every 2 hours at a random minute (e.g. 0 2,4,6... * * *)

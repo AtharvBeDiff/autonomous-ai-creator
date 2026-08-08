@@ -51,9 +51,9 @@ class Publisher {
         return 0;
       }
 
-      // 3. Wait 60s before writing to respect rate limits
-      console.log('[Publisher] Waiting 60s before generating post (rate limit cooldown)...');
-      await new Promise(r => setTimeout(r, 60000));
+      // 3. Wait 3s before writing to respect rate limits (reduced from 60s)
+      console.log('[Publisher] Waiting 3s before generating post (rate limit cooldown)...');
+      await new Promise(r => setTimeout(r, 3000));
 
       // 4. Write post for the best accepted topic
       const chosen = approvedTopics[0];
