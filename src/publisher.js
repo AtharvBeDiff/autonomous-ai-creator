@@ -7,21 +7,23 @@ const { withRetry } = require('./editorial');
 
 class Publisher {
   constructor(apiKey, memory) {
-    if (!apiKey) {
-      throw new Error('GEMINI_API_KEY is required for Publisher operations');
-    }
+    this.apiKey = apiKey;
     this.memory = memory;
     this.discovery = new Discovery();
-    this.editorial = new Editorial(apiKey);
     
-    const genAI = new GoogleGenerativeAI(apiKey);
-    this.model = genAI.getGenerativeModel({
-      model: 'gemini-3.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.7,
-      }
-    });
+    if (apiKey) {
+      this.editorial = new Editorial(apiKey);
+      const genAI = new GoogleGenerativeAI(apiKey);
+      this.model = genAI.getGenerativeModel({
+        model: 'gemini-3.5-flash',
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.7,
+        }
+      });
+    } else {
+      console.warn('[Publisher] No API key — LLM features disabled until key is set.');
+    }
   }
 
   /**

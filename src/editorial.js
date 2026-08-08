@@ -23,17 +23,18 @@ async function withRetry(fn, maxRetries = 3) {
 
 class Editorial {
   constructor(apiKey) {
-    if (!apiKey) {
-      throw new Error('GEMINI_API_KEY is required for Editorial operations');
+    if (apiKey) {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      this.model = genAI.getGenerativeModel({
+        model: 'gemini-3.5-flash',
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.2,
+        }
+      });
+    } else {
+      console.warn('[Editorial] No API key — LLM features disabled until key is set.');
     }
-    const genAI = new GoogleGenerativeAI(apiKey);
-    this.model = genAI.getGenerativeModel({
-      model: 'gemini-3.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.2,
-      }
-    });
   }
 
   /**
