@@ -1,0 +1,26 @@
+{
+  "name": "autonomous-ai-creator",
+  "version": "1.0.0",
+  "description": "Autonomous AI persona that discovers, filters, and publishes AI/tech content without human intervention",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "keywords": [
+    "ai",
+    "autonomous",
+    "agent",
+    "content-creator"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.0",
+    "node-cron": "^3.0.3",
+    "rss-parser": "^3.13.0",
+    "uuid": "^10.0.0"
+  }
+}
